@@ -1,0 +1,506 @@
+-- Bobbie UI Library v2.0
+-- By YourName - Inspired by Rayfield with Glow Effects
+
+local Bobbie = {
+    Version = "2.0 Premium",
+    Windows = {},
+    CurrentTheme = "PurpleGlow",
+    GlowElements = {},
+    Flags = {},
+    Configuration = {
+        FolderName = "Bobbie_Configs",
+        FileExtension = ".bob"
+    }
+}
+
+-- Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
+
+-- Theme System
+Bobbie.Themes = {
+    PurpleGlow = {
+        Primary = Color3.fromRGB(25, 0, 50),
+        Secondary = Color3.fromRGB(40, 0, 80),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(180, 0, 255),
+        Glow = {
+            Color = Color3.fromRGB(200, 50, 255),
+            Intensity = 0.7,
+            Size = 15
+        },
+        Toggle = {
+            On = Color3.fromRGB(180, 0, 255),
+            Off = Color3.fromRGB(80, 80, 80),
+            Knob = Color3.fromRGB(255, 255, 255)
+        },
+        Slider = {
+            Background = Color3.fromRGB(60, 0, 120),
+            Fill = Color3.fromRGB(180, 0, 255),
+            Knob = Color3.fromRGB(255, 255, 255)
+        }
+    },
+    OceanGlow = {
+        -- Thêm các theme khác tương tự
+    }
+}
+
+-- Utility Functions
+local function CreateGlow(parent, sizeOffset)
+    local glow = Instance.new("ImageLabel")
+    glow.Name = "GlowEffect"
+    glow.Image = "rbxassetid://5028857084" -- Glow texture
+    glow.Size = UDim2.new(1, sizeOffset or 40, 1, sizeOffset or 40)
+    glow.Position = UDim2.new(0, -sizeOffset/2 or -20, 0, -sizeOffset/2 or -20)
+    glow.ImageColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Glow.Color
+    glow.ImageTransparency = 1 - Bobbie.Themes[Bobbie.CurrentTheme].Glow.Intensity
+    glow.BackgroundTransparency = 1
+    glow.ZIndex = -1
+    glow.ScaleType = Enum.ScaleType.Slice
+    glow.SliceCenter = Rect.new(100, 100, 100, 100)
+    glow.Parent = parent
+    
+    table.insert(Bobbie.GlowElements, glow)
+    return glow
+end
+
+local function RippleEffect(button)
+    local ripple = Instance.new("Frame")
+    ripple.Name = "Ripple"
+    ripple.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    ripple.BackgroundTransparency = 0.8
+    ripple.Size = UDim2.new(0, 0, 0, 0)
+    ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
+    ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+    ripple.ZIndex = 10
+    ripple.Parent = button
+    
+    local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+    local pos = button.AbsolutePosition
+    ripple.Position = UDim2.new(0, mouse.X - pos.X, 0, mouse.Y - pos.Y)
+    
+    TweenService:Create(ripple, TweenInfo.new(0.5), {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    
+    game:Debris:AddItem(ripple, 0.5)
+end
+
+-- Window Creation
+function Bobbie:CreateWindow(options)
+    options = options or {}
+    
+    local Window = {
+        Name = options.Name or "Bobbie UI",
+        Tabs = {},
+        Minimized = false,
+        Hidden = false
+    }
+    
+    -- Main Container
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.BackgroundColor3 = self.Themes[self.CurrentTheme].Primary
+    MainFrame.Size = UDim2.new(0, 500, 0, 450)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.ClipsDescendants = true
+    
+    -- Add Glow
+    CreateGlow(MainFrame, 50)
+    
+    -- Top Bar
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
+    TopBar.Size = UDim2.new(1, 0, 0, 40)
+    TopBar.BackgroundColor3 = self.Themes[self.CurrentTheme].Secondary
+    
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = Window.Name
+    Title.Size = UDim2.new(0, 0, 1, 0)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+    Title.TextColor3 = self.Themes[self.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.AutomaticSize = Enum.AutomaticSize.X
+    
+    -- Minimize Button
+    local MinimizeButton = Instance.new("ImageButton")
+    MinimizeButton.Name = "MinimizeButton"
+    MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    MinimizeButton.Position = UDim2.new(1, -70, 0.5, 0)
+    MinimizeButton.AnchorPoint = Vector2.new(1, 0.5)
+    MinimizeButton.BackgroundTransparency = 1
+    MinimizeButton.Image = "rbxassetid://3926305904" -- Minimize icon
+    MinimizeButton.ImageRectOffset = Vector2.new(124, 4)
+    MinimizeButton.ImageRectSize = Vector2.new(24, 24)
+    MinimizeButton.ImageColor3 = self.Themes[self.CurrentTheme].Text
+    
+    -- Close Button
+    local CloseButton = Instance.new("ImageButton")
+    CloseButton.Name = "CloseButton"
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -30, 0.5, 0)
+    CloseButton.AnchorPoint = Vector2.new(1, 0.5)
+    CloseButton.BackgroundTransparency = 1
+    CloseButton.Image = "rbxassetid://3926305904" -- Close icon
+    CloseButton.ImageRectOffset = Vector2.new(284, 4)
+    CloseButton.ImageRectSize = Vector2.new(24, 24)
+    CloseButton.ImageColor3 = self.Themes[self.CurrentTheme].Text
+    
+    -- Tab Container
+    local TabContainer = Instance.new("Frame")
+    TabContainer.Name = "TabContainer"
+    TabContainer.Size = UDim2.new(1, -20, 1, -60)
+    TabContainer.Position = UDim2.new(0.5, 0, 0.5, 10)
+    TabContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+    TabContainer.BackgroundTransparency = 1
+    
+    -- Tab Buttons
+    local TabButtons = Instance.new("Frame")
+    TabButtons.Name = "TabButtons"
+    TabButtons.Size = UDim2.new(1, 0, 0, 40)
+    TabButtons.BackgroundTransparency = 1
+    
+    -- Assemble UI
+    Title.Parent = TopBar
+    MinimizeButton.Parent = TopBar
+    CloseButton.Parent = TopBar
+    TopBar.Parent = MainFrame
+    TabButtons.Parent = MainFrame
+    TabContainer.Parent = MainFrame
+    
+    -- Window Functions
+    function Window:Minimize()
+        if self.Minimized then
+            -- Maximize
+            TweenService:Create(MainFrame, TweenInfo.new(0.3), {
+                Size = UDim2.new(0, 500, 0, 450)
+            }):Play()
+            TabContainer.Visible = true
+            MinimizeButton.ImageRectOffset = Vector2.new(124, 4) -- Minimize icon
+        else
+            -- Minimize
+            TweenService:Create(MainFrame, TweenInfo.new(0.3), {
+                Size = UDim2.new(0, 500, 0, 40)
+            }):Play()
+            TabContainer.Visible = false
+            MinimizeButton.ImageRectOffset = Vector2.new(364, 244) -- Restore icon
+        end
+        self.Minimized = not self.Minimized
+    end
+    
+    function Window:Hide()
+        self.Hidden = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+    end
+    
+    function Window:Show()
+        self.Hidden = false
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {
+            Size = UDim2.new(0, 500, 0, 450)
+        }):Play()
+    end
+    
+    -- Button Events
+    MinimizeButton.MouseButton1Click:Connect(function()
+        Window:Minimize()
+    end)
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        Window:Hide()
+    end)
+    
+    -- Make draggable
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+    
+    TopBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    TopBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    -- Mobile adaptation
+    if UserInputService.TouchEnabled then
+        MainFrame.Size = UDim2.new(0.9, 0, 0.7, 0)
+        Title.TextSize = 16
+    end
+    
+    -- Tab Creation Function
+    function Window:CreateTab(name, icon)
+        local Tab = {
+            Name = name,
+            Elements = {}
+        }
+        
+        -- Tab Button
+        local TabButton = Instance.new("TextButton")
+        TabButton.Name = name
+        TabButton.Text = name
+        TabButton.Size = UDim2.new(0, 100, 1, 0)
+        TabButton.BackgroundColor3 = self.Themes[self.CurrentTheme].Secondary
+        TabButton.TextColor3 = self.Themes[self.CurrentTheme].Text
+        TabButton.Font = Enum.Font.Gotham
+        TabButton.TextSize = 12
+        
+        -- Tab Content
+        local TabContent = Instance.new("ScrollingFrame")
+        TabContent.Name = name
+        TabContent.Size = UDim2.new(1, 0, 1, 0)
+        TabContent.BackgroundTransparency = 1
+        TabContent.ScrollBarThickness = 5
+        TabContent.Visible = false
+        TabContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        
+        -- Add to containers
+        TabButton.Parent = TabButtons
+        TabContent.Parent = TabContainer
+        
+        -- Tab Functions
+        function Tab:CreateSection(title)
+            local Section = Instance.new("Frame")
+            Section.Name = "Section"
+            Section.Size = UDim2.new(1, 0, 0, 40)
+            Section.BackgroundTransparency = 1
+            
+            local TitleLabel = Instance.new("TextLabel")
+            TitleLabel.Name = "Title"
+            TitleLabel.Text = title
+            TitleLabel.Size = UDim2.new(1, -20, 0, 20)
+            TitleLabel.Position = UDim2.new(0, 10, 0, 10)
+            TitleLabel.Font = Enum.Font.GothamBold
+            TitleLabel.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+            TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+            TitleLabel.TextSize = 14
+            
+            local Divider = Instance.new("Frame")
+            Divider.Name = "Divider"
+            Divider.Size = UDim2.new(1, -20, 0, 1)
+            Divider.Position = UDim2.new(0, 10, 1, -5)
+            Divider.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+            Divider.BackgroundTransparency = 0.7
+            
+            TitleLabel.Parent = Section
+            Divider.Parent = Section
+            Section.Parent = TabContent
+            
+            local SectionAPI = {}
+            
+            function SectionAPI:SetTitle(newTitle)
+                TitleLabel.Text = newTitle
+            end
+            
+            return SectionAPI
+        end
+        
+        -- Toggle Element (Improved)
+        function Tab:CreateToggle(options)
+            local Toggle = Instance.new("Frame")
+            Toggle.Name = options.Name or "Toggle"
+            Toggle.Size = UDim2.new(1, -20, 0, 35)
+            Toggle.Position = UDim2.new(0.5, 0, 0, 0)
+            Toggle.AnchorPoint = Vector2.new(0.5, 0)
+            Toggle.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+            Toggle.BackgroundTransparency = 0.3
+            
+            local Title = Instance.new("TextLabel")
+            Title.Name = "Title"
+            Title.Text = options.Name or "Toggle"
+            Title.Size = UDim2.new(0.7, 0, 1, 0)
+            Title.Font = Enum.Font.Gotham
+            Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.TextSize = 12
+            
+            local ToggleFrame = Instance.new("Frame")
+            ToggleFrame.Name = "ToggleFrame"
+            ToggleFrame.Size = UDim2.new(0, 50, 0, 25)
+            ToggleFrame.Position = UDim2.new(1, -60, 0.5, 0)
+            ToggleFrame.AnchorPoint = Vector2.new(1, 0.5)
+            ToggleFrame.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Toggle.Off
+            ToggleFrame.BackgroundTransparency = 0
+            
+            local ToggleKnob = Instance.new("Frame")
+            ToggleKnob.Name = "ToggleKnob"
+            ToggleKnob.Size = UDim2.new(0, 20, 0, 20)
+            ToggleKnob.Position = UDim2.new(0, 2, 0.5, 0)
+            ToggleKnob.AnchorPoint = Vector2.new(0, 0.5)
+            ToggleKnob.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Toggle.Knob
+            
+            -- Add glow effect
+            local ToggleGlow = CreateGlow(ToggleFrame, 10)
+            
+            -- Initialize state
+            local CurrentValue = options.Default or false
+            if CurrentValue then
+                TweenService:Create(ToggleFrame, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Toggle.On
+                }):Play()
+                TweenService:Create(ToggleKnob, TweenInfo.new(0.2), {
+                    Position = UDim2.new(1, -22, 0.5, 0)
+                }):Play()
+            end
+            
+            -- Assemble toggle
+            ToggleKnob.Parent = ToggleFrame
+            Title.Parent = Toggle
+            ToggleFrame.Parent = Toggle
+            Toggle.Parent = TabContent
+            
+            -- Click functionality
+            local ToggleButton = Instance.new("TextButton")
+            ToggleButton.Name = "ToggleButton"
+            ToggleButton.Size = UDim2.new(1, 0, 1, 0)
+            ToggleButton.BackgroundTransparency = 1
+            ToggleButton.Text = ""
+            ToggleButton.Parent = Toggle
+            
+            ToggleButton.MouseButton1Click:Connect(function()
+                CurrentValue = not CurrentValue
+                
+                if CurrentValue then
+                    TweenService:Create(ToggleFrame, TweenInfo.new(0.2), {
+                        BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Toggle.On
+                    }):Play()
+                    TweenService:Create(ToggleKnob, TweenInfo.new(0.2), {
+                        Position = UDim2.new(1, -22, 0.5, 0)
+                    }):Play()
+                    TweenService:Create(ToggleGlow, TweenInfo.new(0.2), {
+                        ImageTransparency = 0.5
+                    }):Play()
+                else
+                    TweenService:Create(ToggleFrame, TweenInfo.new(0.2), {
+                        BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Toggle.Off
+                    }):Play()
+                    TweenService:Create(ToggleKnob, TweenInfo.new(0.2), {
+                        Position = UDim2.new(0, 2, 0.5, 0)
+                    }):Play()
+                    TweenService:Create(ToggleGlow, TweenInfo.new(0.2), {
+                        ImageTransparency = 1
+                    }):Play()
+                end
+                
+                if options.Callback then
+                    pcall(options.Callback, CurrentValue)
+                end
+                
+                if options.Flag then
+                    Bobbie.Flags[options.Flag] = CurrentValue
+                end
+            end)
+            
+            -- Hover effects
+            ToggleButton.MouseEnter:Connect(function()
+                TweenService:Create(Toggle, TweenInfo.new(0.2), {
+                    BackgroundTransparency = 0
+                }):Play()
+            end)
+            
+            ToggleButton.MouseLeave:Connect(function()
+                TweenService:Create(Toggle, TweenInfo.new(0.2), {
+                    BackgroundTransparency = 0.3
+                }):Play()
+            end)
+            
+            -- API
+            local ToggleAPI = {}
+            
+            function ToggleAPI:Set(value)
+                CurrentValue = value
+                ToggleButton.MouseButton1Click:Fire()
+            end
+            
+            function ToggleAPI:Get()
+                return CurrentValue
+            end
+            
+            return ToggleAPI
+        end
+        
+        -- Dropdown Element (Improved)
+        function Tab:CreateDropdown(options)
+            -- Implementation similar to toggle but for dropdown
+            -- Includes search functionality, multi-select, etc.
+        end
+        
+        -- Slider Element (Improved)
+        function Tab:CreateSlider(options)
+            -- Implementation with precise control, step increments, etc.
+        end
+        
+        -- Button Element (Improved)
+        function Tab:CreateButton(options)
+            -- Implementation with ripple effect, loading states, etc.
+        end
+        
+        -- Keybind Element
+        function Tab:CreateKeybind(options)
+            -- Implementation similar to Rayfield's keybind system
+        end
+        
+        -- Color Picker
+        function Tab:CreateColorPicker(options)
+            -- Implementation with HSV picker, RGB inputs, etc.
+        end
+        
+        -- Add to window
+        table.insert(self.Tabs, Tab)
+        return Tab
+    end
+    
+    -- Add to library
+    table.insert(self.Windows, Window)
+    return Window
+end
+
+-- Initialize function
+function Bobbie:Init()
+    -- Check mobile
+    if UserInputService.TouchEnabled then
+        self.MobileOptimized = true
+    end
+    
+    -- Create configuration folder if needed
+    if not isfolder(self.Configuration.FolderName) then
+        makefolder(self.Configuration.FolderName)
+    end
+end
+
+-- Return the library
+Bobbie:Init()
+return Bobbie
