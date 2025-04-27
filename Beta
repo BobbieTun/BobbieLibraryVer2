@@ -1961,7 +1961,14 @@ function Bobbie:Init()
 end
 
 -- Return the library with proper encapsulation
-return (function()
-    -- Initialize and return the library
-    return Bobbie:Init()
-end)()
+local success, err = pcall(function()
+    Bobbie:Init()
+    return Bobbie
+end)
+
+if success then
+    return Bobbie
+else
+    warn("Library initialization failed:", err)
+    return nil
+end
