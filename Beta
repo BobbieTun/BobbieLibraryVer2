@@ -101,9 +101,6 @@ function Bobbie:CreateWindow(options)
         Minimized = false,
         Hidden = false
     }
-    Window.ConfigFolder = self.Configuration.FolderName
-    Window.ConfigName = options.Name or "WindowConfig"
-    Window.ConfigSaving = options.ConfigSaving or {Enabled = false}
     
     -- Main Container
     local MainFrame = Instance.new("Frame")
@@ -1941,9 +1938,36 @@ end
     end
 
 -- Return the library
+-- Initialize function
+-- Final initialization function
+    function Bobbie:Init()
+        -- Check mobile
+        if UserInputService.TouchEnabled then
+            self.MobileOptimized = true
+        end
+        
+        -- Create configuration folder if needed
+        if not isfolder(self.Configuration.FolderName) then
+            makefolder(self.Configuration.FolderName)
+        end
+        
+        -- Set default theme
+        self:SetTheme(self.CurrentTheme)
+        
+        -- Add auto-save feature
+        if self.AutoSaveConfig then
+            game:BindToClose(function()
+                for _, window in ipairs(self.Windows) do
+                    window:SaveConfig()
+                end
+            end)
+        end
+    end
+
+-- Return the library
 local function initialize()
     Bobbie:Init()
     return Bobbie
 end
 
-return initialize()
+ initialize()
