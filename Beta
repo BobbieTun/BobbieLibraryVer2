@@ -101,6 +101,9 @@ function Bobbie:CreateWindow(options)
         Minimized = false,
         Hidden = false
     }
+    Window.ConfigFolder = self.Configuration.FolderName
+    Window.ConfigName = options.Name or "WindowConfig"
+    Window.ConfigSaving = options.ConfigSaving or {Enabled = false}
     
     -- Main Container
     local MainFrame = Instance.new("Frame")
@@ -1938,5 +1941,9 @@ end
     end
 
 -- Return the library
-Bobbie:Init()
-return Bobbie
+local function initialize()
+    Bobbie:Init()
+    return Bobbie
+end
+
+return initialize()
