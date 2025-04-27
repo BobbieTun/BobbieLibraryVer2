@@ -9,7 +9,7 @@ local Bobbie = {
     Flags = {},
     Configuration = {
         FolderName = "Bobbie_Configs",
-        FileExtension = ".bob"
+        FileExtension = ".lua"
     }
 }
 
