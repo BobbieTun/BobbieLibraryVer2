@@ -1970,4 +1970,4 @@ local function initialize()
     return Bobbie
 end
 
- initialize()
+return initialize()
