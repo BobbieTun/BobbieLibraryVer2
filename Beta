@@ -1939,20 +1939,16 @@ end
 
 -- Return the library
 function Bobbie:Init()
-    -- Check mobile
     if UserInputService.TouchEnabled then
         self.MobileOptimized = true
     end
     
-    -- Create configuration folder if needed
     if not isfolder(self.Configuration.FolderName) then
         makefolder(self.Configuration.FolderName)
     end
     
-    -- Set default theme
     self:SetTheme(self.CurrentTheme)
     
-    -- Add auto-save feature
     if self.AutoSaveConfig then
         game:BindToClose(function()
             for _, window in ipairs(self.Windows) do
@@ -1964,5 +1960,8 @@ function Bobbie:Init()
     return self
 end
 
--- Return the initialized library
-return Bobbie:Init()
+-- Return the library with proper encapsulation
+return (function()
+    -- Initialize and return the library
+    return Bobbie:Init()
+end)()
