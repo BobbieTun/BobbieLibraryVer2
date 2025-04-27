@@ -452,32 +452,783 @@ function Bobbie:CreateWindow(options)
             return ToggleAPI
         end
         
-        -- Dropdown Element (Improved)
-        function Tab:CreateDropdown(options)
-            -- Implementation similar to toggle but for dropdown
-            -- Includes search functionality, multi-select, etc.
+        -- Tiếp tục từ phần trước
+
+-- Dropdown Element (Improved)
+function Tab:CreateDropdown(options)
+    options = options or {}
+    options.Name = options.Name or "Dropdown"
+    options.Options = options.Options or {"Option 1", "Option 2"}
+    options.Default = options.Default or options.Options[1]
+    options.MultiSelect = options.MultiSelect or false
+    
+    local Dropdown = Instance.new("Frame")
+    Dropdown.Name = options.Name
+    Dropdown.Size = UDim2.new(1, -20, 0, 35)
+    Dropdown.Position = UDim2.new(0.5, 0, 0, 0)
+    Dropdown.AnchorPoint = Vector2.new(0.5, 0)
+    Dropdown.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    Dropdown.BackgroundTransparency = 0.3
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = options.Name
+    Title.Size = UDim2.new(0.7, 0, 1, 0)
+    Title.Font = Enum.Font.Gotham
+    Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.TextSize = 12
+    
+    local SelectedText = Instance.new("TextLabel")
+    SelectedText.Name = "Selected"
+    SelectedText.Text = options.Default
+    SelectedText.Size = UDim2.new(0.3, -30, 1, 0)
+    SelectedText.Position = UDim2.new(0.7, 0, 0, 0)
+    SelectedText.Font = Enum.Font.Gotham
+    SelectedText.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    SelectedText.TextXAlignment = Enum.TextXAlignment.Right
+    SelectedText.TextSize = 12
+    
+    local Arrow = Instance.new("ImageLabel")
+    Arrow.Name = "Arrow"
+    Arrow.Size = UDim2.new(0, 20, 0, 20)
+    Arrow.Position = UDim2.new(1, -25, 0.5, 0)
+    Arrow.AnchorPoint = Vector2.new(1, 0.5)
+    Arrow.Image = "rbxassetid://3926305904" -- Arrow icon
+    Arrow.ImageRectOffset = Vector2.new(364, 284)
+    Arrow.ImageRectSize = Vector2.new(24, 24)
+    Arrow.ImageColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    
+    -- Dropdown list
+    local DropdownList = Instance.new("ScrollingFrame")
+    DropdownList.Name = "DropdownList"
+    DropdownList.Size = UDim2.new(1, 0, 0, 0)
+    DropdownList.Position = UDim2.new(0, 0, 1, 5)
+    DropdownList.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    DropdownList.ScrollBarThickness = 5
+    DropdownList.Visible = false
+    DropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    DropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    DropdownList.ZIndex = 10
+    
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Parent = DropdownList
+    
+    -- Current selection
+    local CurrentSelection = options.MultiSelect and {options.Default} or options.Default
+    local IsOpen = false
+    
+    -- Function to update selected text
+    local function UpdateSelectedText()
+        if options.MultiSelect then
+            if #CurrentSelection == 0 then
+                SelectedText.Text = "None"
+            elseif #CurrentSelection == 1 then
+                SelectedText.Text = CurrentSelection[1]
+            else
+                SelectedText.Text = string.format("%d selected", #CurrentSelection)
+            end
+        else
+            SelectedText.Text = CurrentSelection or "None"
+        end
+    end
+    
+    -- Create options
+    local function CreateOptions()
+        for _, option in ipairs(options.Options) do
+            local OptionButton = Instance.new("TextButton")
+            OptionButton.Name = option
+            OptionButton.Text = option
+            OptionButton.Size = UDim2.new(1, 0, 0, 30)
+            OptionButton.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+            OptionButton.BackgroundTransparency = 0
+            OptionButton.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+            OptionButton.Font = Enum.Font.Gotham
+            OptionButton.TextSize = 12
+            
+            -- Highlight if selected
+            if (options.MultiSelect and table.find(CurrentSelection, option)) or 
+               (not options.MultiSelect and CurrentSelection == option) then
+                OptionButton.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+                OptionButton.BackgroundTransparency = 0.5
+            end
+            
+            OptionButton.MouseButton1Click:Connect(function()
+                if options.MultiSelect then
+                    if table.find(CurrentSelection, option) then
+                        table.remove(CurrentSelection, table.find(CurrentSelection, option))
+                        OptionButton.BackgroundTransparency = 0
+                    else
+                        table.insert(CurrentSelection, option)
+                        OptionButton.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+                        OptionButton.BackgroundTransparency = 0.5
+                    end
+                else
+                    CurrentSelection = option
+                    IsOpen = false
+                    DropdownList.Visible = false
+                    TweenService:Create(DropdownList, TweenInfo.new(0.2), {
+                        Size = UDim2.new(1, 0, 0, 0)
+                    }):Play()
+                    TweenService:Create(Arrow, TweenInfo.new(0.2), {
+                        Rotation = 0
+                    }):Play()
+                    
+                    -- Update all options to remove highlight
+                    for _, child in ipairs(DropdownList:GetChildren()) do
+                        if child:IsA("TextButton") then
+                            child.BackgroundTransparency = 0
+                        end
+                    end
+                    
+                    -- Highlight selected
+                    OptionButton.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+                    OptionButton.BackgroundTransparency = 0.5
+                end
+                
+                UpdateSelectedText()
+                
+                if options.Callback then
+                    pcall(options.Callback, CurrentSelection)
+                end
+                
+                if options.Flag then
+                    Bobbie.Flags[options.Flag] = CurrentSelection
+                end
+            end)
+            
+            OptionButton.Parent = DropdownList
+        end
+    end
+    
+    -- Initial setup
+    CreateOptions()
+    UpdateSelectedText()
+    
+    -- Toggle dropdown
+    local DropdownButton = Instance.new("TextButton")
+    DropdownButton.Name = "DropdownButton"
+    DropdownButton.Size = UDim2.new(1, 0, 1, 0)
+    DropdownButton.BackgroundTransparency = 1
+    DropdownButton.Text = ""
+    DropdownButton.Parent = Dropdown
+    
+    DropdownButton.MouseButton1Click:Connect(function()
+        if Debounce then return end
+        Debounce = true
+        
+        IsOpen = not IsOpen
+        
+        if IsOpen then
+            DropdownList.Visible = true
+            TweenService:Create(DropdownList, TweenInfo.new(0.2), {
+                Size = UDim2.new(1, 0, 0, math.min(#options.Options * 35, 175))
+            }):Play()
+            TweenService:Create(Arrow, TweenInfo.new(0.2), {
+                Rotation = 180
+            }):Play()
+        else
+            TweenService:Create(DropdownList, TweenInfo.new(0.2), {
+                Size = UDim2.new(1, 0, 0, 0)
+            }):Play()
+            TweenService:Create(Arrow, TweenInfo.new(0.2), {
+                Rotation = 0
+            }):Play()
+            wait(0.2)
+            DropdownList.Visible = false
         end
         
-        -- Slider Element (Improved)
-        function Tab:CreateSlider(options)
-            -- Implementation with precise control, step increments, etc.
+        Debounce = false
+    end)
+    
+    -- Close dropdown when clicking outside
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and IsOpen then
+            local mousePos = UserInputService:GetMouseLocation()
+            local absPos = Dropdown.AbsolutePosition
+            local absSize = Dropdown.AbsoluteSize
+            
+            if not (mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
+                   mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y + DropdownList.AbsoluteSize.Y) then
+                IsOpen = false
+                TweenService:Create(DropdownList, TweenInfo.new(0.2), {
+                    Size = UDim2.new(1, 0, 0, 0)
+                }):Play()
+                TweenService:Create(Arrow, TweenInfo.new(0.2), {
+                    Rotation = 0
+                }):Play()
+                wait(0.2)
+                DropdownList.Visible = false
+            end
+        end
+    end)
+    
+    -- Assemble dropdown
+    Title.Parent = Dropdown
+    SelectedText.Parent = Dropdown
+    Arrow.Parent = Dropdown
+    DropdownList.Parent = Dropdown
+    Dropdown.Parent = TabContent
+    
+    -- API
+    local DropdownAPI = {}
+    
+    function DropdownAPI:Set(value)
+        if options.MultiSelect then
+            if type(value) ~= "table" then
+                value = {value}
+            end
+            CurrentSelection = value
+        else
+            CurrentSelection = value
         end
         
-        -- Button Element (Improved)
-        function Tab:CreateButton(options)
-            -- Implementation with ripple effect, loading states, etc.
+        UpdateSelectedText()
+        
+        -- Update highlights
+        for _, child in ipairs(DropdownList:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.BackgroundTransparency = 0
+                
+                if (options.MultiSelect and table.find(CurrentSelection, child.Name)) or 
+                   (not options.MultiSelect and CurrentSelection == child.Name) then
+                    child.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+                    child.BackgroundTransparency = 0.5
+                end
+            end
         end
         
-        -- Keybind Element
-        function Tab:CreateKeybind(options)
-            -- Implementation similar to Rayfield's keybind system
+        if options.Callback then
+            pcall(options.Callback, CurrentSelection)
+        end
+    end
+    
+    function DropdownAPI:Get()
+        return CurrentSelection
+    end
+    
+    function DropdownAPI:Refresh(newOptions)
+        options.Options = newOptions
+        CurrentSelection = options.MultiSelect and {} or nil
+        UpdateSelectedText()
+        
+        -- Clear existing options
+        for _, child in ipairs(DropdownList:GetChildren()) do
+            if child:IsA("TextButton") or child:IsA("UIListLayout") then
+                child:Destroy()
+            end
         end
         
+        -- Create new options
+        CreateOptions()
+    end
+    
+    return DropdownAPI
+end
+
+-- Slider Element (Improved)
+function Tab:CreateSlider(options)
+    options = options or {}
+    options.Name = options.Name or "Slider"
+    options.Min = options.Min or 0
+    options.Max = options.Max or 100
+    options.Default = options.Default or options.Min
+    options.Precise = options.Precise or false -- Enable decimal values
+    options.Suffix = options.Suffix or ""
+    
+    local Slider = Instance.new("Frame")
+    Slider.Name = options.Name
+    Slider.Size = UDim2.new(1, -20, 0, 60)
+    Slider.Position = UDim2.new(0.5, 0, 0, 0)
+    Slider.AnchorPoint = Vector2.new(0.5, 0)
+    Slider.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    Slider.BackgroundTransparency = 0.3
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = options.Name
+    Title.Size = UDim2.new(1, -10, 0, 20)
+    Title.Font = Enum.Font.Gotham
+    Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Position = UDim2.new(0, 10, 0, 5)
+    Title.TextSize = 12
+    
+    local ValueText = Instance.new("TextLabel")
+    ValueText.Name = "Value"
+    ValueText.Text = tostring(options.Default) .. options.Suffix
+    ValueText.Size = UDim2.new(0, 100, 0, 20)
+    ValueText.Position = UDim2.new(1, -110, 0, 5)
+    ValueText.Font = Enum.Font.Gotham
+    ValueText.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    ValueText.TextXAlignment = Enum.TextXAlignment.Right
+    ValueText.TextSize = 12
+    
+    local SliderTrack = Instance.new("Frame")
+    SliderTrack.Name = "Track"
+    SliderTrack.Size = UDim2.new(1, -20, 0, 5)
+    SliderTrack.Position = UDim2.new(0, 10, 1, -20)
+    SliderTrack.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Slider.Background
+    SliderTrack.BorderSizePixel = 0
+    
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Name = "Fill"
+    SliderFill.Size = UDim2.new(0, 0, 1, 0)
+    SliderFill.Position = UDim2.new(0, 0, 0, 0)
+    SliderFill.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Slider.Fill
+    SliderFill.BorderSizePixel = 0
+    
+    local SliderKnob = Instance.new("Frame")
+    SliderKnob.Name = "Knob"
+    SliderKnob.Size = UDim2.new(0, 15, 0, 15)
+    SliderKnob.Position = UDim2.new(0, 0, 0.5, 0)
+    SliderKnob.AnchorPoint = Vector2.new(0, 0.5)
+    SliderKnob.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Slider.Knob
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(1, 0)
+    UICorner.Parent = SliderKnob
+    
+    -- Current value
+    local CurrentValue = options.Default
+    local IsDragging = false
+    
+    -- Calculate position from value
+    local function GetValueFromPosition(x)
+        local relativeX = math.clamp(x - SliderTrack.AbsolutePosition.X, 0, SliderTrack.AbsoluteSize.X)
+        local percent = relativeX / SliderTrack.AbsoluteSize.X
+        local value = options.Min + (options.Max - options.Min) * percent
+        
+        if not options.Precise then
+            value = math.floor(value)
+        else
+            value = math.floor(value * 100) / 100 -- 2 decimal places
+        end
+        
+        return math.clamp(value, options.Min, options.Max)
+    end
+    
+    -- Update slider visuals
+    local function UpdateSlider(value)
+        CurrentValue = value
+        local percent = (value - options.Min) / (options.Max - options.Min)
+        
+        TweenService:Create(SliderFill, TweenInfo.new(0.1), {
+            Size = UDim2.new(percent, 0, 1, 0)
+        }):Play()
+        
+        TweenService:Create(SliderKnob, TweenInfo.new(0.1), {
+            Position = UDim2.new(percent, 0, 0.5, 0)
+        }):Play()
+        
+        ValueText.Text = tostring(value) .. options.Suffix
+        
+        if options.Callback then
+            pcall(options.Callback, value)
+        end
+        
+        if options.Flag then
+            Bobbie.Flags[options.Flag] = value
+        end
+    end
+    
+    -- Mouse events
+    SliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            IsDragging = true
+            local value = GetValueFromPosition(input.Position.X)
+            UpdateSlider(value)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if IsDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local value = GetValueFromPosition(input.Position.X)
+            UpdateSlider(value)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            IsDragging = false
+        end
+    end)
+    
+    -- Input box for precise control
+    local InputBox = Instance.new("TextBox")
+    InputBox.Name = "InputBox"
+    InputBox.Size = UDim2.new(0, 60, 0, 20)
+    InputBox.Position = UDim2.new(1, -70, 0, 25)
+    InputBox.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    InputBox.BackgroundTransparency = 0.5
+    InputBox.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.TextSize = 12
+    InputBox.Text = tostring(options.Default)
+    InputBox.PlaceholderText = "Enter value"
+    
+    InputBox.FocusLost:Connect(function()
+        local num = tonumber(InputBox.Text)
+        if num then
+            num = math.clamp(num, options.Min, options.Max)
+            if not options.Precise then
+                num = math.floor(num)
+            end
+            InputBox.Text = tostring(num)
+            UpdateSlider(num)
+        else
+            InputBox.Text = tostring(CurrentValue)
+        end
+    end)
+    
+    -- Assemble slider
+    SliderFill.Parent = SliderTrack
+    SliderKnob.Parent = SliderTrack
+    SliderTrack.Parent = Slider
+    Title.Parent = Slider
+    ValueText.Parent = Slider
+    InputBox.Parent = Slider
+    Slider.Parent = TabContent
+    
+    -- Initial update
+    UpdateSlider(options.Default)
+    
+    -- API
+    local SliderAPI = {}
+    
+    function SliderAPI:Set(value)
+        value = math.clamp(value, options.Min, options.Max)
+        if not options.Precise then
+            value = math.floor(value)
+        end
+        UpdateSlider(value)
+    end
+    
+    function SliderAPI:Get()
+        return CurrentValue
+    end
+    
+    function SliderAPI:SetRange(newMin, newMax)
+        options.Min = newMin
+        options.Max = newMax
+        UpdateSlider(math.clamp(CurrentValue, newMin, newMax))
+    end
+    
+    return SliderAPI
+end
+-- Button Element (Improved)
+function Tab:CreateButton(options)
+    options = options or {}
+    options.Name = options.Name or "Button"
+    
+    local Button = Instance.new("Frame")
+    Button.Name = options.Name
+    Button.Size = UDim2.new(1, -20, 0, 35)
+    Button.Position = UDim2.new(0.5, 0, 0, 0)
+    Button.AnchorPoint = Vector2.new(0.5, 0)
+    Button.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    Button.BackgroundTransparency = 0.3
+    
+    local ButtonText = Instance.new("TextLabel")
+    ButtonText.Name = "Text"
+    ButtonText.Text = options.Name
+    ButtonText.Size = UDim2.new(1, -10, 1, 0)
+    ButtonText.Position = UDim2.new(0.5, 0, 0.5, 0)
+    ButtonText.AnchorPoint = Vector2.new(0.5, 0.5)
+    ButtonText.Font = Enum.Font.GothamBold
+    ButtonText.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    ButtonText.TextSize = 12
+    
+    -- Add glow effect
+    local ButtonGlow = CreateGlow(Button, 10)
+    
+    -- Clickable area
+    local ButtonClick = Instance.new("TextButton")
+    ButtonClick.Name = "Button"
+    ButtonClick.Size = UDim2.new(1, 0, 1, 0)
+    ButtonClick.BackgroundTransparency = 1
+    ButtonClick.Text = ""
+    ButtonClick.Parent = Button
+    
+    -- Loading state
+    local LoadingSpinner = Instance.new("ImageLabel")
+    LoadingSpinner.Name = "Loading"
+    LoadingSpinner.Size = UDim2.new(0, 20, 0, 20)
+    LoadingSpinner.Position = UDim2.new(1, -25, 0.5, 0)
+    LoadingSpinner.AnchorPoint = Vector2.new(1, 0.5)
+    LoadingSpinner.Image = "rbxassetid://3926305904" -- Loading icon
+    LoadingSpinner.ImageRectOffset = Vector2.new(44, 364)
+    LoadingSpinner.ImageRectSize = Vector2.new(36, 36)
+    LoadingSpinner.ImageColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    LoadingSpinner.Visible = false
+    LoadingSpinner.Parent = Button
+    
+    local IsLoading = false
+    
+    -- Button click animation
+    ButtonClick.MouseButton1Click:Connect(function()
+        if IsLoading then return end
+        
+        -- Ripple effect
+        RippleEffect(ButtonClick)
+        
+        -- Click animation
+        TweenService:Create(Button, TweenInfo.new(0.1), {
+            BackgroundTransparency = 0.1
+        }):Play()
+        TweenService:Create(ButtonGlow, TweenInfo.new(0.1), {
+            ImageTransparency = 0.4
+        }):Play()
+        
+        wait(0.1)
+        
+        TweenService:Create(Button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.3
+        }):Play()
+        TweenService:Create(ButtonGlow, TweenInfo.new(0.2), {
+            ImageTransparency = 0.7
+        }):Play()
+        
+        -- Callback
+        if options.Callback then
+            if options.Loading then
+                IsLoading = true
+                ButtonText.Text = options.LoadingText or "Loading..."
+                LoadingSpinner.Visible = true
+                
+                -- Rotate spinner
+                local rotation = 0
+                local spinnerConnection
+                spinnerConnection = RunService.RenderStepped:Connect(function(dt)
+                    rotation = (rotation + dt * 360) % 360
+                    LoadingSpinner.Rotation = rotation
+                end)
+                
+                -- Run callback in a separate thread
+                coroutine.wrap(function()
+                    local success, err = pcall(options.Callback)
+                    
+                    spinnerConnection:Disconnect()
+                    IsLoading = false
+                    LoadingSpinner.Visible = false
+                    ButtonText.Text = options.Name
+                    
+                    if not success then
+                        warn("Button callback error:", err)
+                        TweenService:Create(Button, TweenInfo.new(0.3), {
+                            BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+                        }):Play()
+                        ButtonText.Text = "Error!"
+                        wait(1)
+                        TweenService:Create(Button, TweenInfo.new(0.3), {
+                            BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+                        }):Play()
+                        ButtonText.Text = options.Name
+                    end
+                end)()
+            else
+                local success, err = pcall(options.Callback)
+                if not success then
+                    warn("Button callback error:", err)
+                    TweenService:Create(Button, TweenInfo.new(0.3), {
+                        BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+                    }):Play()
+                    ButtonText.Text = "Error!"
+                    wait(1)
+                    TweenService:Create(Button, TweenInfo.new(0.3), {
+                        BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+                    }):Play()
+                    ButtonText.Text = options.Name
+                end
+            end
+        end
+    end)
+    
+    -- Hover effects
+    ButtonClick.MouseEnter:Connect(function()
+        if IsLoading then return end
+        TweenService:Create(Button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0
+        }):Play()
+        TweenService:Create(ButtonGlow, TweenInfo.new(0.2), {
+            ImageTransparency = 0.5
+        }):Play()
+    end)
+    
+    ButtonClick.MouseLeave:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.3
+        }):Play()
+        TweenService:Create(ButtonGlow, TweenInfo.new(0.2), {
+            ImageTransparency = 0.7
+        }):Play()
+    end)
+    
+    -- Tooltip
+    if options.Tooltip then
+        CreateTooltip(Button, options.Tooltip)
+    end
+    
+    -- Assemble button
+    ButtonText.Parent = Button
+    Button.Parent = TabContent
+    
+    -- API
+    local ButtonAPI = {}
+    
+    function ButtonAPI:SetText(newText)
+        ButtonText.Text = newText
+    end
+    
+    function ButtonAPI:SetLoading(loading)
+        IsLoading = loading
+        ButtonText.Text = loading and (options.LoadingText or "Loading...") or options.Name
+        LoadingSpinner.Visible = loading
+    end
+    
+    return ButtonAPI
+end
         -- Color Picker
-        function Tab:CreateColorPicker(options)
-            -- Implementation with HSV picker, RGB inputs, etc.
+        function Tab:CreateKeybind(options)
+            options = options or {}
+            options.Name = options.Name or "Keybind"
+            options.Default = options.Default or "None"
+            options.HoldToInteract = options.HoldToInteract or false
+            
+            local Keybind = Instance.new("Frame")
+            Keybind.Name = options.Name
+            Keybind.Size = UDim2.new(1, -20, 0, 35)
+            Keybind.Position = UDim2.new(0.5, 0, 0, 0)
+            Keybind.AnchorPoint = Vector2.new(0.5, 0)
+            Keybind.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+            Keybind.BackgroundTransparency = 0.3
+            
+            local Title = Instance.new("TextLabel")
+            Title.Name = "Title"
+            Title.Text = options.Name
+            Title.Size = UDim2.new(0.7, 0, 1, 0)
+            Title.Font = Enum.Font.Gotham
+            Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.TextSize = 12
+            
+            local KeyText = Instance.new("TextButton")
+            KeyText.Name = "KeyText"
+            KeyText.Text = options.Default
+            KeyText.Size = UDim2.new(0.3, -30, 0, 25)
+            KeyText.Position = UDim2.new(0.7, 0, 0.5, 0)
+            KeyText.AnchorPoint = Vector2.new(0.7, 0.5)
+            KeyText.Font = Enum.Font.Gotham
+            KeyText.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+            KeyText.TextSize = 12
+            KeyText.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+            KeyText.BackgroundTransparency = 0.5
+            
+            local UICorner = Instance.new("UICorner")
+            UICorner.CornerRadius = UDim.new(0, 4)
+            UICorner.Parent = KeyText
+            
+            local UIStroke = Instance.new("UIStroke")
+            UIStroke.Color = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+            UIStroke.Thickness = 1
+            UIStroke.Parent = KeyText
+            
+            -- Current key
+            local CurrentKey = options.Default
+            local Listening = false
+            
+            -- Function to set key
+            local function SetKey(key)
+                CurrentKey = key
+                KeyText.Text = key
+                
+                if options.Callback and not Listening then
+                    pcall(options.Callback, key)
+                end
+                
+                if options.Flag then
+                    Bobbie.Flags[options.Flag] = key
+                end
+            end
+            
+            -- Key listening
+            KeyText.MouseButton1Click:Connect(function()
+                if Listening then return end
+                
+                Listening = true
+                KeyText.Text = "..."
+                
+                local connection
+                connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                    if gameProcessed then return end
+                    
+                    if input.UserInputType == Enum.UserInputType.Keyboard then
+                        local key = input.KeyCode.Name
+                        SetKey(key)
+                        connection:Disconnect()
+                        Listening = false
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        SetKey("MouseButton1")
+                        connection:Disconnect()
+                        Listening = false
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+                        SetKey("MouseButton2")
+                        connection:Disconnect()
+                        Listening = false
+                    end
+                end)
+            end)
+            
+            -- Key detection for functionality
+            UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                if gameProcessed or Listening then return end
+                
+                if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == CurrentKey then
+                    if options.HoldToInteract then
+                        if options.Callback then
+                            pcall(options.Callback, true)
+                        end
+                        
+                        local released
+                        local connection
+                        connection = input.Changed:Connect(function()
+                            if input.UserInputState == Enum.UserInputState.End then
+                                released = true
+                                connection:Disconnect()
+                                
+                                if options.Callback then
+                                    pcall(options.Callback, false)
+                                end
+                            end
+                        end)
+                    else
+                        if options.Callback then
+                            pcall(options.Callback)
+                        end
+                    end
+                end
+            end)
+            
+            -- Assemble keybind
+            Title.Parent = Keybind
+            KeyText.Parent = Keybind
+            Keybind.Parent = TabContent
+            
+            -- API
+            local KeybindAPI = {}
+            
+            function KeybindAPI:Set(key)
+                SetKey(key)
+            end
+            
+            function KeybindAPI:Get()
+                return CurrentKey
+            end
+            
+            return KeybindAPI
         end
-        
         -- Add to window
         table.insert(self.Tabs, Tab)
         return Tab
@@ -487,19 +1238,704 @@ function Bobbie:CreateWindow(options)
     table.insert(self.Windows, Window)
     return Window
 end
-
--- Initialize function
-function Bobbie:Init()
-    -- Check mobile
-    if UserInputService.TouchEnabled then
-        self.MobileOptimized = true
+-- Color Picker Element
+function Tab:CreateColorPicker(options)
+    options = options or {}
+    options.Name = options.Name or "ColorPicker"
+    options.Default = options.Default or Color3.fromRGB(255, 0, 0)
+    
+    local ColorPicker = Instance.new("Frame")
+    ColorPicker.Name = options.Name
+    ColorPicker.Size = UDim2.new(1, -20, 0, 35)
+    ColorPicker.Position = UDim2.new(0.5, 0, 0, 0)
+    ColorPicker.AnchorPoint = Vector2.new(0.5, 0)
+    ColorPicker.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    ColorPicker.BackgroundTransparency = 0.3
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = options.Name
+    Title.Size = UDim2.new(0.7, 0, 1, 0)
+    Title.Font = Enum.Font.Gotham
+    Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.TextSize = 12
+    
+    local ColorPreview = Instance.new("Frame")
+    ColorPreview.Name = "Preview"
+    ColorPreview.Size = UDim2.new(0, 50, 0, 25)
+    ColorPreview.Position = UDim2.new(1, -60, 0.5, 0)
+    ColorPreview.AnchorPoint = Vector2.new(1, 0.5)
+    ColorPreview.BackgroundColor3 = options.Default
+    ColorPreview.BackgroundTransparency = 0
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 4)
+    UICorner.Parent = ColorPreview
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+    UIStroke.Thickness = 1
+    UIStroke.Parent = ColorPreview
+    
+    -- Color picker popup
+    local ColorPickerPopup = Instance.new("Frame")
+    ColorPickerPopup.Name = "ColorPickerPopup"
+    ColorPickerPopup.Size = UDim2.new(0, 200, 0, 200)
+    ColorPickerPopup.Position = UDim2.new(1, 10, 0, 0)
+    ColorPickerPopup.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    ColorPickerPopup.Visible = false
+    ColorPickerPopup.ZIndex = 10
+    
+    -- Color spectrum
+    local ColorSpectrum = Instance.new("ImageLabel")
+    ColorSpectrum.Name = "Spectrum"
+    ColorSpectrum.Size = UDim2.new(0, 180, 0, 180)
+    ColorSpectrum.Position = UDim2.new(0.5, 0, 0.5, 0)
+    ColorSpectrum.AnchorPoint = Vector2.new(0.5, 0.5)
+    ColorSpectrum.Image = "rbxassetid://2615689005" -- Color spectrum image
+    ColorSpectrum.BackgroundTransparency = 1
+    
+    -- Brightness slider
+    local BrightnessSlider = Instance.new("Frame")
+    BrightnessSlider.Name = "BrightnessSlider"
+    BrightnessSlider.Size = UDim2.new(0, 20, 0, 180)
+    BrightnessSlider.Position = UDim2.new(1, -25, 0.5, 0)
+    BrightnessSlider.AnchorPoint = Vector2.new(1, 0.5)
+    BrightnessSlider.BackgroundColor3 = Color3.new(1, 1, 1)
+    
+    local BrightnessGradient = Instance.new("UIGradient")
+    BrightnessGradient.Rotation = 90
+    BrightnessGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+    }
+    BrightnessGradient.Parent = BrightnessSlider
+    
+    local BrightnessKnob = Instance.new("Frame")
+    BrightnessKnob.Name = "Knob"
+    BrightnessKnob.Size = UDim2.new(1, 4, 0, 8)
+    BrightnessKnob.Position = UDim2.new(0.5, 0, 0, 0)
+    BrightnessKnob.AnchorPoint = Vector2.new(0.5, 0)
+    BrightnessKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+    BrightnessKnob.ZIndex = 2
+    
+    -- Current color values
+    local CurrentColor = options.Default
+    local Hue, Saturation, Value = CurrentColor:ToHSV()
+    local IsOpen = false
+    local IsDragging = false
+    local IsDraggingBrightness = false
+    
+    -- Update color function
+    local function UpdateColor(h, s, v)
+        Hue = h or Hue
+        Saturation = s or Saturation
+        Value = v or Value
+        
+        CurrentColor = Color3.fromHSV(Hue, Saturation, Value)
+        ColorPreview.BackgroundColor3 = CurrentColor
+        
+        if options.Callback then
+            pcall(options.Callback, CurrentColor)
+        end
+        
+        if options.Flag then
+            Bobbie.Flags[options.Flag] = CurrentColor
+        end
     end
     
-    -- Create configuration folder if needed
-    if not isfolder(self.Configuration.FolderName) then
-        makefolder(self.Configuration.FolderName)
+    -- Open/close color picker
+    local function ToggleColorPicker()
+        IsOpen = not IsOpen
+        ColorPickerPopup.Visible = IsOpen
+        
+        if IsOpen then
+            -- Position the popup properly
+            local absolutePos = ColorPreview.AbsolutePosition
+            local absoluteSize = ColorPreview.AbsoluteSize
+            
+            if absolutePos.X + absoluteSize.X + ColorPickerPopup.AbsoluteSize.X > workspace.CurrentCamera.ViewportSize.X then
+                ColorPickerPopup.Position = UDim2.new(0, -(ColorPickerPopup.AbsoluteSize.X + 10), 0, 0)
+            else
+                ColorPickerPopup.Position = UDim2.new(1, 10, 0, 0)
+            end
+        end
+    end
+    
+    -- Color spectrum interaction
+    ColorSpectrum.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            IsDragging = true
+            local x = (input.Position.X - ColorSpectrum.AbsolutePosition.X) / ColorSpectrum.AbsoluteSize.X
+            local y = (input.Position.Y - ColorSpectrum.AbsolutePosition.Y) / ColorSpectrum.AbsoluteSize.Y
+            
+            Hue = math.clamp(x, 0, 1)
+            Saturation = math.clamp(1 - y, 0, 1)
+            UpdateColor()
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if IsDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local x = (input.Position.X - ColorSpectrum.AbsolutePosition.X) / ColorSpectrum.AbsoluteSize.X
+            local y = (input.Position.Y - ColorSpectrum.AbsolutePosition.Y) / ColorSpectrum.AbsoluteSize.Y
+            
+            Hue = math.clamp(x, 0, 1)
+            Saturation = math.clamp(1 - y, 0, 1)
+            UpdateColor()
+        elseif IsDraggingBrightness and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local y = (input.Position.Y - BrightnessSlider.AbsolutePosition.Y) / BrightnessSlider.AbsoluteSize.Y
+            Value = math.clamp(1 - y, 0, 1)
+            UpdateColor()
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            IsDragging = false
+            IsDraggingBrightness = false
+        end
+    end)
+    
+    -- Brightness slider interaction
+    BrightnessSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            IsDraggingBrightness = true
+            local y = (input.Position.Y - BrightnessSlider.AbsolutePosition.Y) / BrightnessSlider.AbsoluteSize.Y
+            Value = math.clamp(1 - y, 0, 1)
+            UpdateColor()
+        end
+    end)
+    
+    -- Click on color preview
+    ColorPreview.MouseButton1Click:Connect(function()
+        ToggleColorPicker()
+    end)
+    
+    -- Close when clicking outside
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and IsOpen then
+            local mousePos = input.Position
+            local colorPickerPos = ColorPickerPopup.AbsolutePosition
+            local colorPickerSize = ColorPickerPopup.AbsoluteSize
+            
+            if not (mousePos.X >= colorPickerPos.X and mousePos.X <= colorPickerPos.X + colorPickerSize.X and
+                   mousePos.Y >= colorPickerPos.Y and mousePos.Y <= colorPickerPos.Y + colorPickerSize.Y) then
+                ToggleColorPicker()
+            end
+        end
+    end)
+    
+    -- Assemble color picker
+    ColorSpectrum.Parent = ColorPickerPopup
+    BrightnessSlider.Parent = ColorPickerPopup
+    BrightnessKnob.Parent = BrightnessSlider
+    ColorPickerPopup.Parent = ColorPicker
+    Title.Parent = ColorPicker
+    ColorPreview.Parent = ColorPicker
+    ColorPicker.Parent = TabContent
+    
+    -- Initial update
+    UpdateColor(Hue, Saturation, Value)
+    
+    -- API
+    local ColorPickerAPI = {}
+    
+    function ColorPickerAPI:Set(color)
+        CurrentColor = color
+        Hue, Saturation, Value = color:ToHSV()
+        ColorPreview.BackgroundColor3 = color
+        
+        if options.Callback then
+            pcall(options.Callback, color)
+        end
+    end
+    
+    function ColorPickerAPI:Get()
+        return CurrentColor
+    end
+    
+    return ColorPickerAPI
+end
+-- Input Box Element
+function Tab:CreateInput(options)
+    options = options or {}
+    options.Name = options.Name or "Input"
+    options.Placeholder = options.Placeholder or "Enter text..."
+    options.Default = options.Default or ""
+    options.ClearOnFocus = options.ClearOnFocus or false
+    
+    local Input = Instance.new("Frame")
+    Input.Name = options.Name
+    Input.Size = UDim2.new(1, -20, 0, 35)
+    Input.Position = UDim2.new(0.5, 0, 0, 0)
+    Input.AnchorPoint = Vector2.new(0.5, 0)
+    Input.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    Input.BackgroundTransparency = 0.3
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = options.Name
+    Title.Size = UDim2.new(0.4, 0, 1, 0)
+    Title.Font = Enum.Font.Gotham
+    Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.TextSize = 12
+    
+    local InputBox = Instance.new("TextBox")
+    InputBox.Name = "InputBox"
+    InputBox.Size = UDim2.new(0.6, -20, 0, 25)
+    InputBox.Position = UDim2.new(0.4, 0, 0.5, 0)
+    InputBox.AnchorPoint = Vector2.new(0.4, 0.5)
+    InputBox.Font = Enum.Font.Gotham
+    InputBox.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    InputBox.TextSize = 12
+    InputBox.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    InputBox.BackgroundTransparency = 0.5
+    InputBox.PlaceholderText = options.Placeholder
+    InputBox.Text = options.Default
+    InputBox.ClearTextOnFocus = options.ClearOnFocus
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 4)
+    UICorner.Parent = InputBox
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+    UIStroke.Thickness = 1
+    UIStroke.Parent = InputBox
+    
+    -- Focus effects
+    InputBox.Focused:Connect(function()
+        TweenService:Create(InputBox, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.3
+        }):Play()
+        TweenService:Create(UIStroke, TweenInfo.new(0.2), {
+            Color = Bobbie.Themes[Bobbie.CurrentTheme].Text
+        }):Play()
+    end)
+    
+    InputBox.FocusLost:Connect(function()
+        TweenService:Create(InputBox, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.5
+        }):Play()
+        TweenService:Create(UIStroke, TweenInfo.new(0.2), {
+            Color = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+        }):Play()
+        
+        if options.Callback then
+            pcall(options.Callback, InputBox.Text)
+        end
+        
+        if options.Flag then
+            Bobbie.Flags[options.Flag] = InputBox.Text
+        end
+    end)
+    
+    -- Assemble input
+    Title.Parent = Input
+    InputBox.Parent = Input
+    Input.Parent = TabContent
+    
+    -- API
+    local InputAPI = {}
+    
+    function InputAPI:Set(text)
+        InputBox.Text = text
+        if options.Callback then
+            pcall(options.Callback, text)
+        end
+    end
+    
+    function InputAPI:Get()
+        return InputBox.Text
+    end
+    
+    return InputAPI
+end
+-- Label Element
+function Tab:CreateLabel(options)
+    options = options or {}
+    options.Name = options.Name or "Label"
+    options.Text = options.Text or "Label Text"
+    
+    local Label = Instance.new("Frame")
+    Label.Name = options.Name
+    Label.Size = UDim2.new(1, -20, 0, 30)
+    Label.Position = UDim2.new(0.5, 0, 0, 0)
+    Label.AnchorPoint = Vector2.new(0.5, 0)
+    Label.BackgroundTransparency = 1
+    
+    local LabelText = Instance.new("TextLabel")
+    LabelText.Name = "Text"
+    LabelText.Text = options.Text
+    LabelText.Size = UDim2.new(1, -10, 1, 0)
+    LabelText.Position = UDim2.new(0.5, 0, 0.5, 0)
+    LabelText.AnchorPoint = Vector2.new(0.5, 0.5)
+    LabelText.Font = Enum.Font.Gotham
+    LabelText.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    LabelText.TextSize = 12
+    LabelText.TextWrapped = true
+    
+    -- If it's a section title
+    if options.IsTitle then
+        LabelText.Font = Enum.Font.GothamBold
+        LabelText.TextSize = 14
+        LabelText.TextXAlignment = Enum.TextXAlignment.Left
+        
+        local Divider = Instance.new("Frame")
+        Divider.Name = "Divider"
+        Divider.Size = UDim2.new(1, 0, 0, 1)
+        Divider.Position = UDim2.new(0, 0, 1, -5)
+        Divider.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+        Divider.BackgroundTransparency = 0.7
+        Divider.Parent = Label
+    end
+    
+    -- Assemble label
+    LabelText.Parent = Label
+    Label.Parent = TabContent
+    
+    -- API
+    local LabelAPI = {}
+    
+    function LabelAPI:Set(text)
+        LabelText.Text = text
+    end
+    
+    return LabelAPI
+end
+-- Paragraph Element
+function Tab:CreateParagraph(options)
+    options = options or {}
+    options.Title = options.Title or "Title"
+    options.Content = options.Content or "Content"
+    
+    local Paragraph = Instance.new("Frame")
+    Paragraph.Name = "Paragraph"
+    Paragraph.Size = UDim2.new(1, -20, 0, 60)
+    Paragraph.Position = UDim2.new(0.5, 0, 0, 0)
+    Paragraph.AnchorPoint = Vector2.new(0.5, 0)
+    Paragraph.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    Paragraph.BackgroundTransparency = 0.3
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = options.Title
+    Title.Size = UDim2.new(1, -10, 0, 20)
+    Title.Position = UDim2.new(0, 10, 0, 5)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.TextSize = 14
+    
+    local Content = Instance.new("TextLabel")
+    Content.Name = "Content"
+    Content.Text = options.Content
+    Content.Size = UDim2.new(1, -10, 1, -30)
+    Content.Position = UDim2.new(0, 10, 0, 25)
+    Content.Font = Enum.Font.Gotham
+    Content.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Content.TextXAlignment = Enum.TextXAlignment.Left
+    Content.TextYAlignment = Enum.TextYAlignment.Top
+    Content.TextSize = 12
+    Content.TextWrapped = true
+    
+    -- Assemble paragraph
+    Title.Parent = Paragraph
+    Content.Parent = Paragraph
+    Paragraph.Parent = TabContent
+    
+    -- API
+    local ParagraphAPI = {}
+    
+    function ParagraphAPI:SetTitle(text)
+        Title.Text = text
+    end
+    
+    function ParagraphAPI:SetContent(text)
+        Content.Text = text
+    end
+    
+    return ParagraphAPI
+end
+-- Divider Element
+function Tab:CreateDivider()
+    local Divider = Instance.new("Frame")
+    Divider.Name = "Divider"
+    Divider.Size = UDim2.new(1, -20, 0, 1)
+    Divider.Position = UDim2.new(0.5, 0, 0, 0)
+    Divider.AnchorPoint = Vector2.new(0.5, 0)
+    Divider.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Accent
+    Divider.BackgroundTransparency = 0.7
+    
+    Divider.Parent = TabContent
+    
+    -- API
+    local DividerAPI = {}
+    
+    function DividerAPI:SetVisible(visible)
+        Divider.Visible = visible
+    end
+    
+    return DividerAPI
+end
+    -- Notification System
+function Bobbie:Notify(options)
+    options = options or {}
+    options.Title = options.Title or "Notification"
+    options.Content = options.Content or "This is a notification"
+    options.Duration = options.Duration or 5
+    options.Image = options.Image or nil
+    
+    -- Create notification frame
+    local Notification = Instance.new("Frame")
+    Notification.Name = "Notification"
+    Notification.Size = UDim2.new(0, 300, 0, 80)
+    Notification.Position = UDim2.new(1, -320, 1, -100)
+    Notification.BackgroundColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Secondary
+    Notification.BackgroundTransparency = 1
+    Notification.ZIndex = 100
+    
+    -- Add glow
+    local Glow = CreateGlow(Notification, 20)
+    Glow.ZIndex = 99
+    
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Text = options.Title
+    Title.Size = UDim2.new(1, -50, 0, 20)
+    Title.Position = UDim2.new(0, 50, 0, 10)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.TextSize = 14
+    Title.TextTransparency = 1
+    
+    -- Content
+    local Content = Instance.new("TextLabel")
+    Content.Name = "Content"
+    Content.Text = options.Content
+    Content.Size = UDim2.new(1, -50, 1, -40)
+    Content.Position = UDim2.new(0, 50, 0, 30)
+    Content.Font = Enum.Font.Gotham
+    Content.TextColor3 = Bobbie.Themes[Bobbie.CurrentTheme].Text
+    Content.TextXAlignment = Enum.TextXAlignment.Left
+    Content.TextYAlignment = Enum.TextYAlignment.Top
+    Content.TextSize = 12
+    Content.TextWrapped = true
+    Content.TextTransparency = 1
+    
+    -- Icon
+    local Icon = Instance.new("ImageLabel")
+    Icon.Name = "Icon"
+    Icon.Size = UDim2.new(0, 30, 0, 30)
+    Icon.Position = UDim2.new(0, 10, 0, 10)
+    Icon.BackgroundTransparency = 1
+    Icon.ImageTransparency = 1
+    
+    if options.Image then
+        if type(options.Image) == "string" then
+            -- Assume it's an icon name (you'd need an icon system)
+            Icon.Image = "rbxassetid://" .. options.Image
+        else
+            Icon.Image = "rbxassetid://" .. options.Image
+        end
+    else
+        Icon.Image = "rbxassetid://0" -- Default blank image
+    end
+    
+    -- Assemble notification
+    Title.Parent = Notification
+    Content.Parent = Notification
+    Icon.Parent = Notification
+    Notification.Parent = game:GetService("CoreGui")
+    
+    -- Animation
+    TweenService:Create(Notification, TweenInfo.new(0.3), {
+        BackgroundTransparency = 0.2,
+        Position = UDim2.new(1, -320, 1, -120)
+    }):Play()
+    
+    TweenService:Create(Title, TweenInfo.new(0.3), {
+        TextTransparency = 0
+    }):Play()
+    
+    TweenService:Create(Content, TweenInfo.new(0.3), {
+        TextTransparency = 0.2
+    }):Play()
+    
+    TweenService:Create(Icon, TweenInfo.new(0.3), {
+        ImageTransparency = 0
+    }):Play()
+    
+    TweenService:Create(Glow, TweenInfo.new(0.3), {
+        ImageTransparency = 0.5
+    }):Play()
+    
+    -- Auto-close after duration
+    task.delay(options.Duration, function()
+        TweenService:Create(Notification, TweenInfo.new(0.3), {
+            BackgroundTransparency = 1,
+            Position = UDim2.new(1, -320, 1, -100)
+        }):Play()
+        
+        TweenService:Create(Title, TweenInfo.new(0.3), {
+            TextTransparency = 1
+        }):Play()
+        
+        TweenService:Create(Content, TweenInfo.new(0.3), {
+            TextTransparency = 1
+        }):Play()
+        
+        TweenService:Create(Icon, TweenInfo.new(0.3), {
+            ImageTransparency = 1
+        }):Play()
+        
+        TweenService:Create(Glow, TweenInfo.new(0.3), {
+            ImageTransparency = 1
+        }):Play()
+        
+        wait(0.3)
+        Notification:Destroy()
+    end)
+end
+    -- Configuration Saving
+function Window:SaveConfig()
+    if not self.ConfigSaving then return end
+    
+    local config = {}
+    
+    -- Save window position
+    config.Position = {
+        X = MainFrame.Position.X.Offset,
+        Y = MainFrame.Position.Y.Offset
+    }
+    
+    -- Save tab states
+    config.Tabs = {}
+    for _, tab in ipairs(self.Tabs) do
+        local tabConfig = {}
+        
+        -- You'd need to implement saving for each element type
+        -- This is just a basic example
+        for _, element in ipairs(tab.Elements) do
+            if element.Type == "Toggle" then
+                tabConfig[element.Name] = element:Get()
+            elseif element.Type == "Slider" then
+                tabConfig[element.Name] = element:Get()
+            -- Add other element types
+            end
+        end
+        
+        config.Tabs[tab.Name] = tabConfig
+    end
+    
+    -- Save to file
+    local json = HttpService:JSONEncode(config)
+    if writefile then
+        writefile(self.ConfigFolder .. "/" .. self.ConfigName .. ".bob", json)
     end
 end
+
+function Window:LoadConfig()
+    if not self.ConfigSaving then return end
+    
+    if readfile and isfile(self.ConfigFolder .. "/" .. self.ConfigName .. ".bob") then
+        local success, config = pcall(function()
+            return HttpService:JSONDecode(readfile(self.ConfigFolder .. "/" .. self.ConfigName .. ".bob"))
+        end)
+        
+        if success and config then
+            -- Load window position
+            if config.Position then
+                MainFrame.Position = UDim2.new(0, config.Position.X, 0, config.Position.Y)
+            end
+            
+            -- Load tab states
+            if config.Tabs then
+                for tabName, tabConfig in pairs(config.Tabs) do
+                    for _, tab in ipairs(self.Tabs) do
+                        if tab.Name == tabName then
+                            for elementName, value in pairs(tabConfig) do
+                                for _, element in ipairs(tab.Elements) do
+                                    if element.Name == elementName then
+                                        if element.Set then
+                                            element:Set(value)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+-- Theme Management
+function Bobbie:SetTheme(themeName)
+    if not self.Themes[themeName] then
+        warn("Theme not found: " .. themeName)
+        return
+    end
+    
+    self.CurrentTheme = themeName
+    
+    -- Update all UI elements
+    for _, window in ipairs(self.Windows) do
+        -- Update window colors
+        window.MainFrame.BackgroundColor3 = self.Themes[themeName].Primary
+        window.TopBar.BackgroundColor3 = self.Themes[themeName].Secondary
+        
+        -- Update all elements in all tabs
+        for _, tab in ipairs(window.Tabs) do
+            -- You'd need to implement theme updating for each element type
+            -- This is just a basic example
+            for _, element in ipairs(tab.Elements) do
+                if element.UpdateTheme then
+                    element:UpdateTheme(self.Themes[themeName])
+                end
+            end
+        end
+    end
+    
+    -- Update glow elements
+    for _, glow in ipairs(self.GlowElements) do
+        glow.ImageColor3 = self.Themes[themeName].Glow.Color
+        glow.ImageTransparency = 1 - self.Themes[themeName].Glow.Intensity
+    end
+end
+
+-- Initialize function
+-- Final initialization function
+    function Bobbie:Init()
+        -- Check mobile
+        if UserInputService.TouchEnabled then
+            self.MobileOptimized = true
+        end
+        
+        -- Create configuration folder if needed
+        if not isfolder(self.Configuration.FolderName) then
+            makefolder(self.Configuration.FolderName)
+        end
+        
+        -- Set default theme
+        self:SetTheme(self.CurrentTheme)
+        
+        -- Add auto-save feature
+        if self.AutoSaveConfig then
+            game:BindToClose(function()
+                for _, window in ipairs(self.Windows) do
+                    window:SaveConfig()
+                end
+            end)
+        end
+    end
 
 -- Return the library
 Bobbie:Init()
