@@ -62,6 +62,7 @@ local function CreateGlow(parent, sizeOffset)
     glow.ScaleType = Enum.ScaleType.Slice
     glow.SliceCenter = Rect.new(100, 100, 100, 100)
     glow.Parent = parent
+    glow.Transparancy = 0.5
     
     table.insert(Bobbie.GlowElements, glow)
     return glow
@@ -110,9 +111,16 @@ function Bobbie:CreateWindow(options)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     MainFrame.ClipsDescendants = true
-    
+    MainFrame.Frame.Postion = Vector2.new(0.5, 0.6, 0.8)
     -- Add Glow
     CreateGlow(MainFrame, 50)
+    local function Glowing()
+    {
+    while true do
+    glowing.Index = new Vector.Running.Available = 0.1
+    glowing.Transparancy = random(RGB(0,0,0))
+    end
+    
     
     -- Top Bar
     local TopBar = Instance.new("Frame")
@@ -131,6 +139,9 @@ function Bobbie:CreateWindow(options)
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Position = UDim2.new(0, 15, 0, 0)
     Title.AutomaticSize = Enum.AutomaticSize.X
+    Title.Minimized() 
+    
+    
     
     -- Minimize Button
     local MinimizeButton = Instance.new("ImageButton")
@@ -226,6 +237,9 @@ function Bobbie:CreateWindow(options)
     local dragInput
     local dragStart
     local startPos
+    local endPos
+    local exitdrag
+    local natural
     
     TopBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -246,7 +260,13 @@ function Bobbie:CreateWindow(options)
             dragInput = input
         end
     end)
-    
+
+    UserInputService.InputChangedd:Connect(Function(input)
+        if input == dragInput and not dragging then
+            local delta = input.Position
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset , startPos.Y.Scale, startPos.Y.Offset)
+        end
+    end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
