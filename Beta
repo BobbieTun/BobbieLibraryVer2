@@ -1,8 +1,3 @@
--- BobbieLibV2.lua
--- Clean, modular, loadstring-friendly Bobbie Library (UI + Utils + Themes + Config)
--- Usage: local Bobbie = loadstring(game:HttpGet("https://raw.githubusercontent.com/BobbieTun/BobbieLibraryVer2/main/BobbieLibV2.lua"))()
-
-
 local Bobbie = {}
 Bobbie.__index = Bobbie
 Bobbie.Version = "2.0.0-beta-clean"
@@ -82,3 +77,16 @@ end
 -- ======= Config =======
 Bobbie.Config.Folder = "BobbieConfigs"
 
+
+function Bobbie.Config:Save(name, tbl)
+name = name or "default"
+local ok, encoded = pcall(function() return HttpService:JSONEncode(tbl) end)
+if not ok then return false end
+local path = (Bobbie.Config.Folder .. "/" .. name .. ".json")
+safeWrite(path, encoded)
+return true
+end
+
+
+function Bobbie.Config:Load(name)
+return Bobbie
